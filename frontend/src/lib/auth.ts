@@ -1,13 +1,13 @@
-const TOKEN_KEY = "smart_contract_builder_token";
+const TOKEN_KEY = "scb_token";
 
-export const authStorage = {
-  getToken() {
-    return localStorage.getItem(TOKEN_KEY);
-  },
-  setToken(token: string) {
-    localStorage.setItem(TOKEN_KEY, token);
-  },
-  clearToken() {
-    localStorage.removeItem(TOKEN_KEY);
-  },
-};
+export function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string) {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+}

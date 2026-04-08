@@ -1,0 +1,40 @@
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.core.security import create_access_token, hash_password, verify_password
+from app.models import User
+from app.schemas.auth import LoginRequest, SignupRequest
+
+
+def create_user(db: Session, payload: SignupRequest) -> tuple[User, str]:
+    existing_user = db.query(User).filter(User.email == payload.email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered",
+        )
+
+    user = User(
+        full_name=payload.full_name,
+        email=payload.email,
+        hashed_password=hash_password(payload.password),
+        freelancer_type=payload.freelancer_type,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    token = create_access_token(user.email)
+    return user, token
+
+
+def authenticate_user(db: Session, payload: LoginRequest) -> tuple[User, str]:
+    user = db.query(User).filter(User.email == payload.email).first()
+    if not user or not verify_password(payload.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    token = create_access_token(user.email)
+    return user, token

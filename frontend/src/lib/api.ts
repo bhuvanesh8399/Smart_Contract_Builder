@@ -1,61 +1,41 @@
+import { clearToken, getToken } from "./auth";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
-export type User = {
-  id: number;
-  full_name: string;
-  email: string;
-  auth_provider: string;
-  created_at: string;
-};
+type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
-export type AuthResponse = {
-  access_token: string;
-  token_type: string;
-  user: User;
-};
+async function request<T>(
+  path: string,
+  method: HttpMethod = "GET",
+  body?: unknown
+): Promise<T> {
+  const token = getToken();
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    method,
     headers: {
       "Content-Type": "application/json",
-      ...(options.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    ...options,
+    body: body ? JSON.stringify(body) : undefined,
   });
 
-  const contentType = response.headers.get("content-type") || "";
-  const data = contentType.includes("application/json")
-    ? await response.json()
-    : await response.text();
+  const data = await response.json();
 
-  if (!response.ok) {
-    const message =
-      typeof data === "object" && data && "detail" in data && typeof data.detail === "string"
-        ? data.detail
-        : "Something went wrong";
-    throw new Error(message);
+  if (response.status === 401) {
+    clearToken();
   }
 
-  return data as T;
+  if (!response.ok || !data.success) {
+    throw new Error(data.detail || data.message || "Request failed");
+  }
+
+  return data.data as T;
 }
 
 export const api = {
-  signup: (payload: { full_name: string; email: string; password: string }) =>
-    request<AuthResponse>("/api/auth/signup", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
-
-  login: (payload: { email: string; password: string }) =>
-    request<AuthResponse>("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
-
-  me: (token: string) =>
-    request<User>("/api/auth/me", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }),
+  get: <T>(path: string) => request<T>(path, "GET"),
+  post: <T>(path: string, body?: unknown) => request<T>(path, "POST", body),
+  put: <T>(path: string, body?: unknown) => request<T>(path, "PUT", body),
+  delete: <T>(path: string) => request<T>(path, "DELETE"),
 };

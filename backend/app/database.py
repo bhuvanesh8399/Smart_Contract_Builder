@@ -1,7 +1,11 @@
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = "sqlite:///./smart_contract_builder.db"
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+DATABASE_PATH = BACKEND_DIR / "smart_contract_builder.db"
+DATABASE_URL = f"sqlite:///{DATABASE_PATH.as_posix()}"
 
 engine = create_engine(
     DATABASE_URL,
